@@ -3,7 +3,13 @@
 from __future__ import division, print_function, unicode_literals
 from PIL import Image
 import numpy as np
-from math import floor
+
+
+def fast_floor(x):
+    if x > 0:
+        return int(x)
+    else:
+        return int(x-1)
 
 
 def get_perm():
@@ -25,30 +31,20 @@ def get_perm():
 
 
 def grad3(index):
-    return [[1, 1, 0],
-            [-1, 1, 0],
-            [1, -1, 0],
-            [-1, -1, 0],
-            [1, 0, 1],
-            [-1, 0, 1],
-            [1, 0, -1],
-            [-1, 0, -1],
-            [0, 1, 1],
-            [0, -1, 1],
-            [0, 1, -1],
-            [0, -1, -1]][index]
+    return [[1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
+            [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1],
+            [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]][index]
 
 
-def skew(x, y, z):
-    skewfactor = (x + y + z) / 3.0
-    i = int(floor(x + skewfactor))
-    j = int(floor(y + skewfactor))
-    k = int(floor(z + skewfactor))
+def skew(x, y, z, skewfactor):
+    s = (x + y + z) * skewfactor
+    i = fast_floor(x + s)
+    j = fast_floor(y + s)
+    k = fast_floor(z + s)
     return i, j, k
 
 
-def calculate_origin_offset(x, y, z, skewed_simplex_origin):
-    unskewfactor = 1 / 6.0
+def calculate_origin_offset(x, y, z, skewed_simplex_origin, unskewfactor):
     t = (x + y + z) * unskewfactor
     x0 = x - (skewed_simplex_origin[0] - t)
     y0 = y - (skewed_simplex_origin[1] - t)
@@ -56,20 +52,17 @@ def calculate_origin_offset(x, y, z, skewed_simplex_origin):
     return x0, y0, z0
 
 
-def calculate_vertex_offsets(x0, y0, z0, i1, j1, k1, i2, j2, k2):
-    x1 = x0 - i1 + 1 / 6.0
-    y1 = y0 - j1 + 1 / 6.0
-    z1 = z0 - k1 + 1 / 6.0
-    x2 = x0 - i2 + 1 / 3.0
-    y2 = y0 - j2 + 1 / 3.0
-    z2 = z0 - k2 + 1 / 3.0
-    x3 = x0 - 0.5
-    y3 = y0 - 0.5
-    z3 = z0 - 0.5
-    return x1, y1, z1, x2, y2, z2, x3, y3, z3
+def calculate_vertex_offsets(origin_offset, second_corner, third_corner, unskewfactor):
+    vertex_offsets = [origin_offset, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+    for dim in range(3):
+        vertex_offsets[1][dim] = origin_offset[dim] - second_corner[dim] + unskewfactor
+        vertex_offsets[2][dim] = origin_offset[dim] - third_corner[dim] + 2.0 * unskewfactor
+        vertex_offsets[3][dim] = origin_offset[dim] - 1.0 + 3.0 * unskewfactor
+    return vertex_offsets
 
 
-def find_simplex(x0, y0, z0):
+def find_simplex(origin_offset):
+    x0, y0, z0 = origin_offset
     if x0 >= y0:
         if y0 >= z0:
             i1, j1, k1, i2, j2, k2 = (1, 0, 0, 1, 1, 0)
@@ -84,46 +77,48 @@ def find_simplex(x0, y0, z0):
             i1, j1, k1, i2, j2, k2 = (0, 1, 0, 0, 1, 1)
         else:
             i1, j1, k1, i2, j2, k2 = (0, 1, 0, 1, 1, 0)
-    return i1, j1, k1, i2, j2, k2
+    return (i1, j1, k1), (i2, j2, k2)
 
 
-def get_vertex_gradient_indices(perm, skewed_simplex_origin, i1, j1, k1, i2, j2, k2):
+def get_vertex_gradient_indices(perm, skewed_simplex_origin, second_corner, third_corner):
     ii = skewed_simplex_origin[0] & 255
     jj = skewed_simplex_origin[1] & 255
     kk = skewed_simplex_origin[2] & 255
     gi0 = perm[ii + perm[jj + perm[kk]]] % 12
-    gi1 = perm[ii + i1 + perm[jj + j1 + perm[kk + k1]]] % 12
-    gi2 = perm[ii + i2 + perm[jj + j2 + perm[kk + k2]]] % 12
+    gi1 = perm[ii + second_corner[0] + perm[jj + second_corner[1] + perm[kk + second_corner[2]]]] % 12
+    gi2 = perm[ii + third_corner[0] + perm[jj + third_corner[1] + perm[kk + third_corner[2]]]] % 12
     gi3 = perm[ii + 1 + perm[jj + 1 + perm[kk + 1]]] % 12
     return gi0, gi1, gi2, gi3
 
 
-def calculate_gradient_contribution(xd, yd, zd, gi):
+def calculate_gradient_contribution(vertex_offsets, gi):
     n = [0.0, 0.0, 0.0, 0.0]
     for vertex_no in range(4):
-        t = 0.5 - xd[vertex_no] * xd[vertex_no] - yd[vertex_no] * yd[vertex_no] - zd[vertex_no] * zd[vertex_no]
+        t = 0.5 - vertex_offsets[vertex_no][0]**2 - vertex_offsets[vertex_no][1]**2 - vertex_offsets[vertex_no][2]**2
         if t >= 0:
             t *= t
-            n[vertex_no] = t * t * np.dot(grad3(gi[vertex_no]), [xd[vertex_no], yd[vertex_no], zd[vertex_no]])
+            n[vertex_no] = t * t * np.dot(grad3(gi[vertex_no]), vertex_offsets[vertex_no])
     return 32.0 * np.sum(n)
 
 
 def noise(x, y, z):
+    skewfactor = 1.0 / 3
+    unskewfactor = 1.0 / 6
     perm = get_perm()
-    skewed_simplex_origin = skew(x, y, z)
-    x0, y0, z0 = calculate_origin_offset(x, y, z, skewed_simplex_origin)
-    i1, j1, k1, i2, j2, k2 = find_simplex(x0, y0, z0)
-    x1, y1, z1, x2, y2, z2, x3, y3, z3 = calculate_vertex_offsets(x0, y0, z0, i1, j1, k1, i2, j2, k2)
-    gi = get_vertex_gradient_indices(perm, skewed_simplex_origin, i1, j1, k1, i2, j2, k2)
-    return calculate_gradient_contribution((x0, x1, x2, x3), (y0, y1, y2, y3), (z0, z1, z2, z3), gi)
+    skewed_simplex_origin = skew(x, y, z, skewfactor)
+    origin_offset = calculate_origin_offset(x, y, z, skewed_simplex_origin, unskewfactor)
+    second_corner, third_corner = find_simplex(origin_offset)
+    vertex_offsets = calculate_vertex_offsets(origin_offset, second_corner, second_corner, unskewfactor)
+    gi = get_vertex_gradient_indices(perm, skewed_simplex_origin, second_corner, third_corner)
+    return calculate_gradient_contribution(vertex_offsets, gi)
 
 
 if __name__ == "__main__":
     arr = np.zeros((256, 256, 3), dtype=np.uint8)
     for y in range(0, 256):
         for x in range(0, 256):
-            val = noise(x/100.0, y/120.0, 0.0)
-            val = max(0, min(255, int(round((val + 0.5) * 128))))
+            val = noise(x/80.0, y/70.0, 0.0)
+            val = int(round((val + 0.5) * 128))
             arr[x, y, 0] = val
             arr[x, y, 1] = val
             arr[x, y, 2] = val
