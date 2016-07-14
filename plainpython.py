@@ -65,19 +65,19 @@ def find_simplex(origin_offset):
     x0, y0, z0 = origin_offset
     if x0 >= y0:
         if y0 >= z0:
-            i1, j1, k1, i2, j2, k2 = (1, 0, 0, 1, 1, 0)
+            vertex1, vertex2 = (1, 0, 0), (1, 1, 0)  # blue
         elif x0 >= z0:
-            i1, j1, k1, i2, j2, k2 = (1, 0, 0, 1, 0, 1)
+            vertex1, vertex2 = (1, 0, 0), (1, 0, 1)  # red
         else:
-            i1, j1, k1, i2, j2, k2 = (0, 0, 1, 1, 0, 1)
+            vertex1, vertex2 = (0, 0, 1), (1, 0, 1)  # dark green
     else:
         if y0 < z0:
-            i1, j1, k1, i2, j2, k2 = (0, 0, 1, 0, 1, 1)
+            vertex1, vertex2 = (0, 0, 1), (0, 1, 1)  # yellow
         elif x0 < z0:
-            i1, j1, k1, i2, j2, k2 = (0, 1, 0, 0, 1, 1)
+            vertex1, vertex2 = (0, 1, 0), (0, 1, 1)  # pink
         else:
-            i1, j1, k1, i2, j2, k2 = (0, 1, 0, 1, 1, 0)
-    return (i1, j1, k1), (i2, j2, k2)
+            vertex1, vertex2 = (0, 1, 0), (1, 1, 0)  # green
+    return vertex1, vertex2
 
 
 def get_vertex_gradient_indices(perm, skewed_simplex_origin, second_corner, third_corner):
