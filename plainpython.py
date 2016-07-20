@@ -114,6 +114,81 @@ def noise(x, y, z):
     return calculate_gradient_contribution(vertex_offsets, gi)
 
 
+def noise3d(x, y, z):
+    F3 = 1.0/3.0
+    s = (x+y+z)*F3
+    i = fast_floor(x+s)
+    j = fast_floor(y+s)
+    k = fast_floor(z+s)
+
+    G3 = 1.0/6.0
+    t = (i+j+k)*G3
+    x0 = x-(i-t)
+    y0 = y-(j-t)
+    z0 = z-(k-t)
+
+    if x0 >= y0:
+        if y0 >= z0:
+            i1, j1, k1, i2, j2, k2 = (1, 0, 0, 1, 1, 0)
+        elif x0 >= z0:
+            i1, j1, k1, i2, j2, k2 = (1, 0, 0, 1, 0, 1)
+        else:
+            i1, j1, k1, i2, j2, k2 = (0, 0, 1, 1, 0, 1)
+    else:
+        if y0 < z0:
+            i1, j1, k1, i2, j2, k2 = (0, 0, 1, 0, 1, 1)
+        elif x0 < z0:
+            i1, j1, k1, i2, j2, k2 = (0, 1, 0, 0, 1, 1)
+        else:
+            i1, j1, k1, i2, j2, k2 = (0, 1, 0, 1, 1, 0)
+
+    x1 = x0-i1+G3
+    y1 = y0-j1+G3
+    z1 = z0-k1+G3
+    x2 = x0-i2+2.0*G3
+    y2 = y0-j2+2.0*G3
+    z2 = z0-k2+2.0*G3
+    x3 = x0-1.0+3.0*G3
+    y3 = y0-1.0+3.0*G3
+    z3 = z0-1.0+3.0*G3
+
+    perm = get_perm()
+    ii = i & 255
+    jj = j & 255
+    kk = k & 255
+    gi0 = perm[ii + perm[jj + perm[kk]]] % 12
+    gi1 = perm[ii + i1 + perm[jj + j1 + perm[kk + k1]]] % 12
+    gi2 = perm[ii + i2 + perm[jj + j2 + perm[kk + k2]]] % 12
+    gi3 = perm[ii + 1 + perm[jj + 1 + perm[kk + 1]]] % 12
+
+    t0 = 0.5 - x0 * x0 - y0 * y0 - z0 * z0
+    if t0 < 0:
+        n0 = 0.0
+    else:
+        t0 *= t0
+        n0 = t0 * t0 * np.dot(grad3(gi0), [x0, y0, z0])
+    t1 = 0.5 - x1 * x1 - y1 * y1 - z1 * z1
+    if t1 < 0:
+        n1 = 0.0
+    else:
+        t1 *= t1
+        n1 = t1 * t1 * np.dot(grad3(gi1), [x1, y1, z1])
+    t2 = 0.5 - x2 * x2 - y2 * y2 - z2 * z2
+    if t2 < 0:
+        n2 = 0.0
+    else:
+        t2 *= t2
+        n2 = t2 * t2 * np.dot(grad3(gi2), [x2, y2, z2])
+    t3 = 0.5 - x3 * x3 - y3 * y3 - z3 * z3
+    if t3 < 0:
+        n3 = 0.0
+    else:
+        t3 *= t3
+        n3 = t3 * t3 * np.dot(grad3(gi3), [x3, y3, z3])
+
+    return 23.0 * (n0 + n1 + n2 + n3)
+
+
 def noise2d(x, y):
     F2 = 0.5 * (sqrt(3.0) - 1.0)
     s = (x + y) * F2
@@ -152,7 +227,7 @@ if __name__ == "__main__":
     arr = np.zeros((256, 256, 3), dtype=np.uint8)
     for y in range(0, 256):
         for x in range(0, 256):
-            val = noise(x/80.0, y/70.0, 0.0)
+            val = noise3d(x/80.0, y/70.0, 0.0)
             #val = noise2d(x/40.0, y/35.0)
             val = int(fast_floor((val + 1.0) * 128))
             arr[x, y, 0] = val
