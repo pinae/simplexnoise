@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 from PIL import Image
 import numpy as np
+from math import sqrt
 
 
 def fast_floor(x):
@@ -113,12 +114,47 @@ def noise(x, y, z):
     return calculate_gradient_contribution(vertex_offsets, gi)
 
 
+def noise2d(x, y):
+    F2 = 0.5 * (sqrt(3.0) - 1.0)
+    s = (x + y) * F2
+    i, j = (fast_floor(x + s), fast_floor(y + s))
+    G2 = (3.0 - sqrt(3.0)) / 6.0
+    t = (i + j) * G2
+    dist = (x - (i - t), y - (j - t))
+    if dist[0] > dist[1]:
+        second_corner = (1, 0)
+    else:
+        second_corner = (0, 1)
+    offsets = [(dist[0]-second_corner[0]+G2, dist[1]-second_corner[1]+G2),
+               (dist[0]-1.0+2.0*G2, dist[1]-1.0+2.0*G2)]
+    ii, jj = (i & 255, j & 255)
+    perm = get_perm()
+    gi = [perm[ii+perm[jj]] % 12,
+          perm[ii+second_corner[0]+perm[jj+second_corner[1]]] % 12,
+          perm[ii+1+perm[jj+1]] % 12]
+    n = [0.0, 0.0, 0.0]
+    t0 = 0.5-dist[0]**2-dist[1]**2
+    if t0 >= 0:
+        t0 *= t0
+        n[0] = t0*t0*np.dot(grad3(gi[0])[:2], dist)
+    t1 = 0.5 - offsets[0][0] ** 2 - offsets[0][1] ** 2
+    if t1 >= 0:
+        t1 *= t1
+        n[1] = t1 * t1 * np.dot(grad3(gi[1])[:2], offsets[0])
+    t2 = 0.5 - offsets[1][0] ** 2 - offsets[1][1] ** 2
+    if t2 >= 0:
+        t2 *= t2
+        n[2] = t2 * t2 * np.dot(grad3(gi[2])[:2], offsets[1])
+    return 70.0*(n[0]+n[1]+n[2])
+
+
 if __name__ == "__main__":
     arr = np.zeros((256, 256, 3), dtype=np.uint8)
     for y in range(0, 256):
         for x in range(0, 256):
             val = noise(x/80.0, y/70.0, 0.0)
-            val = int(round((val + 0.5) * 128))
+            #val = noise2d(x/40.0, y/35.0)
+            val = int(fast_floor((val + 1.0) * 128))
             arr[x, y, 0] = val
             arr[x, y, 1] = val
             arr[x, y, 2] = val
