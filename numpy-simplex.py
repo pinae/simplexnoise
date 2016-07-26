@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 from PIL import Image
+from time import time
 
 perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
         37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32,
@@ -76,11 +77,16 @@ def np_noise3d(v):
 
 
 if __name__ == "__main__":
-    arr = np.zeros((256, 256, 3), dtype=np.uint8)
+    raw_noise = np.empty((256, 256), dtype=np.float32)
+    start_time = time()
     for y in range(0, 256):
         for x in range(0, 256):
-            val = np_noise3d(np.array([x/80.0, y/80.0, 1.7]))
-            val = int(np.floor((val + 1.0) * 128))
+            raw_noise[x, y] = np_noise3d(np.array([x/80.0, y/80.0, 1.7]))
+    print("The calculation took " + str(time() - start_time) + " seconds.")
+    arr = np.empty((256, 256, 3), dtype=np.uint8)
+    for y in range(0, 256):
+        for x in range(0, 256):
+            val = int(np.floor((raw_noise[x, y] + 1.0) * 128))
             arr[x, y, 0] = val
             arr[x, y, 1] = val
             arr[x, y, 2] = val

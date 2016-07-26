@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 from PIL import Image
 import numpy as np
 from math import sqrt
+from time import time
 
 
 perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
@@ -145,12 +146,18 @@ def noise2d(x, y):
 
 
 if __name__ == "__main__":
-    arr = np.zeros((256, 256, 3), dtype=np.uint8)
+    raw_noise = np.empty((256, 256), dtype=np.float32)
+    start_time = time()
     for y in range(0, 256):
         for x in range(0, 256):
-            val = noise3d(x/80.0, y/80.0, 1.7)
-            #val = noise2d(x/40.0, y/35.0)
-            val = int(fast_floor((val + 1.0) * 128))
+            raw_noise[x, y] = noise3d(x/80.0, y/80.0, 1.7)
+    print("The calculation took " + str(time() - start_time) + " seconds.")
+    arr = np.empty((256, 256, 3), dtype=np.uint8)
+    for y in range(0, 256):
+        for x in range(0, 256):
+            # val = noise3d(x/80.0, y/80.0, 1.7)
+            # val = noise2d(x/40.0, y/35.0)
+            val = int(fast_floor((raw_noise[x, y] + 1.0) * 128))
             arr[x, y, 0] = val
             arr[x, y, 1] = val
             arr[x, y, 2] = val

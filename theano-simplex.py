@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import theano.tensor as T
 import theano
+from time import time
 
 
 np_perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
@@ -126,7 +127,9 @@ if __name__ == "__main__":
     for y in range(0, 256):
         for x in range(0, 256):
             input_vectors[y * 256 + x] = [x / 80.0, y / 80.0, 1.7]
+    start_time = time()
     raw_noise = simplex_noise(input_vectors, np_perm, np_grad3)
+    print("The calculation took " + str(time() - start_time) + " seconds.")
     arr = np.zeros((256, 256, 3), dtype=np.uint8)
     for y in range(0, 256):
         for x in range(0, 256):
