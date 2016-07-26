@@ -27,43 +27,21 @@ np_grad3 = np.array([[1, 1, 0], [-1, 1, 0], [1, -1, 0], [-1, -1, 0],
                      [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1]], dtype=np.float32)
 
 vertices_options = np.array([
-    [[1, 0, 0], [1, 1, 0]],
-    [[1, 0, 0], [1, 0, 1]],
-    [[0, 0, 1], [1, 0, 1]],
-    [[0, 0, 1], [0, 1, 1]],
-    [[0, 1, 0], [0, 1, 1]],
-    [[0, 1, 0], [1, 1, 0]]
-], dtype=np.int32)
-
-# Dimesions are: x0 >= y0, y0 >= z0, x0 >= z0
-vertices_table = np.array([
-    [[[vertices_options[3]], [vertices_options[3]]],
-     [[vertices_options[4]], [vertices_options[5]]]],
-    [[[vertices_options[2]], [vertices_options[1]]],
-     [[vertices_options[2]], [vertices_options[0]]]]
+    [1, 0, 0, 1, 1, 0],
+    [1, 0, 0, 1, 0, 1],
+    [0, 0, 1, 1, 0, 1],
+    [0, 0, 1, 0, 1, 1],
+    [0, 1, 0, 0, 1, 1],
+    [0, 1, 0, 1, 1, 0]
 ], dtype=np.uint8)
 
-
-def select_simplex(offset):
-    return T.switch(T.ge(offset[0], offset[1]),
-                    T.switch(T.ge(offset[1], offset[2]), vertices_options[0],
-                             T.switch(T.ge(offset[0], offset[2]), vertices_options[1],
-                                      vertices_options[2])),
-                    T.switch(T.lt(offset[1], offset[2]), vertices_options[3],
-                             T.switch(T.lt(offset[0], offset[2]), vertices_options[4],
-                                      vertices_options[5]))
-                    )
-
-
-"""def select_simplex(offset):
-    return ifelse(T.ge(offset[0], offset[1]),
-                  ifelse(T.ge(offset[1], offset[2]), vertices_options[0],
-                         ifelse(T.ge(offset[0], offset[2]), vertices_options[1],
-                                vertices_options[2])),
-                  ifelse(T.lt(offset[1], offset[2]), vertices_options[3],
-                         ifelse(T.lt(offset[0], offset[2]), vertices_options[4],
-                                vertices_options[5]))
-                  )"""
+# Dimesions are: x0 >= y0, y0 >= z0, x0 >= z0
+np_vertex_table = np.array([
+    [[vertices_options[3], vertices_options[3]],
+     [vertices_options[4], vertices_options[5]]],
+    [[vertices_options[2], vertices_options[1]],
+     [vertices_options[2], vertices_options[0]]]
+], dtype=np.uint8)
 
 
 def offset_product(offset, gi, gradient_map):
@@ -79,12 +57,18 @@ def calculate_gradient_contribution(offsets, gis, gradient_map):
         t ** 4 * dp)
 
 
-def matrix_noise3d(input_vectors, perm, grad3):
+def matrix_noise3d(input_vectors, perm, grad3, vertex_table):
     skew_factors = (input_vectors[:, 0] + input_vectors[:, 1] + input_vectors[:, 2]) * 1.0 / 3.0
     skewed_vectors = T.floor(input_vectors + skew_factors[:, np.newaxis])
     unskew_factors = (skewed_vectors[:, 0] + skewed_vectors[:, 1] + skewed_vectors[:, 2]) * 1.0 / 6.0
     offsets_0 = input_vectors - (skewed_vectors - unskew_factors[:, np.newaxis])
-    simplex_vertices, _ = theano.map(fn=select_simplex, sequences=[offsets_0])
+    vertex_table_x_index = T.ge(offsets_0[:, 0], offsets_0[:, 1])
+    vertex_table_y_index = T.ge(offsets_0[:, 1], offsets_0[:, 2])
+    vertex_table_z_index = T.ge(offsets_0[:, 0], offsets_0[:, 2])
+    simplex_vertices = vertex_table[
+        vertex_table_x_index,
+        vertex_table_y_index,
+        vertex_table_z_index].reshape((input_vectors.shape[0], 2, 3))
     offsets_1 = offsets_0 - simplex_vertices[:, 0] + 1.0 / 6.0
     offsets_2 = offsets_0 - simplex_vertices[:, 1] + 1.0 / 3.0
     offsets_3 = offsets_0 - 0.5
@@ -109,28 +93,36 @@ def matrix_noise3d(input_vectors, perm, grad3):
 
 
 if __name__ == "__main__":
+    theano.config.mode = 'FAST_RUN'
+    theano.config.floatX = 'float32'
     theano.config.openmp = True
     theano.config.openmp_elemwise_minsize = 2000
+    # theano.config.compute_test_value = 'warn'
     perm = T.vector('perm', dtype='int32')
+    # perm.tag.test_value = np_perm
     grad3 = T.matrix('grad3', dtype='float32')
+    # grad3.tag.test_value = np_grad3
+    vertex_table = T.tensor4('vertex_table', dtype='int32')
+    # vertex_table.tag.test_value = np_vertex_table
     vl = T.matrix('vl', dtype='float32')
-    output = matrix_noise3d(vl, perm, grad3)
-    simplex_noise = theano.function([vl, perm, grad3], output)
+    vl.tag.test_value = np.array([[0.5, 0.1, 1.7], [1.7732, 0.1461, 1.7]], dtype=np.float32)
+    output = matrix_noise3d(vl, perm, grad3, vertex_table)
+    simplex_noise = theano.function([vl, perm, grad3, vertex_table], output)
     print("Compiled")
-    input_vectors = np.zeros((256 * 256, 3), dtype=np.float32)
-    for y in range(0, 256):
-        for x in range(0, 256):
-            input_vectors[y * 256 + x] = [x / 80.0, y / 80.0, 1.7]
+    arr = np.empty((512, 512, 3), dtype=np.uint8)
+    input_vectors = np.zeros((arr.shape[1] * arr.shape[0], 3), dtype=np.float32)
+    for y in range(0, arr.shape[0]):
+        for x in range(0, arr.shape[1]):
+            input_vectors[y * arr.shape[1] + x] = [x / 80.0, y / 80.0, 1.7]
     start_time = time()
-    raw_noise = simplex_noise(input_vectors, np_perm, np_grad3)
+    raw_noise = simplex_noise(input_vectors, np_perm, np_grad3, np_vertex_table)
     print("The calculation took " + str(time() - start_time) + " seconds.")
-    arr = np.zeros((256, 256, 3), dtype=np.uint8)
-    for y in range(0, 256):
-        for x in range(0, 256):
-            val = raw_noise[x + y * 256]
+    for y in range(0, arr.shape[0]):
+        for x in range(0, arr.shape[1]):
+            val = raw_noise[x + y * arr.shape[1]]
             val = int(np.floor((val + 1.0) * 128))
-            arr[x, y, 0] = val
-            arr[x, y, 1] = val
-            arr[x, y, 2] = val
+            arr[y, x, 0] = val
+            arr[y, x, 1] = val
+            arr[y, x, 2] = val
     image = Image.fromarray(arr)
     image.show()

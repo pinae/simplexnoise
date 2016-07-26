@@ -146,20 +146,20 @@ def noise2d(x, y):
 
 
 if __name__ == "__main__":
-    raw_noise = np.empty((256, 256), dtype=np.float32)
+    raw_noise = np.empty((512, 512), dtype=np.float32)
     start_time = time()
-    for y in range(0, 256):
-        for x in range(0, 256):
+    for y in range(0, raw_noise.shape[1]):
+        for x in range(0, raw_noise.shape[0]):
             raw_noise[x, y] = noise3d(x/80.0, y/80.0, 1.7)
     print("The calculation took " + str(time() - start_time) + " seconds.")
-    arr = np.empty((256, 256, 3), dtype=np.uint8)
-    for y in range(0, 256):
-        for x in range(0, 256):
+    arr = np.empty((raw_noise.shape[1], raw_noise.shape[0], 3), dtype=np.uint8)
+    for y in range(0, raw_noise.shape[1]):
+        for x in range(0, raw_noise.shape[0]):
             # val = noise3d(x/80.0, y/80.0, 1.7)
             # val = noise2d(x/40.0, y/35.0)
             val = int(fast_floor((raw_noise[x, y] + 1.0) * 128))
-            arr[x, y, 0] = val
-            arr[x, y, 1] = val
-            arr[x, y, 2] = val
+            arr[y, x, 0] = val
+            arr[y, x, 1] = val
+            arr[y, x, 2] = val
     image = Image.fromarray(arr)
     image.show()
