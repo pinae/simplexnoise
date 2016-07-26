@@ -44,10 +44,8 @@ vertices_table = np.array([
 
 def calculate_gradient_contribution(offsets, gis, gradient_map):
     t = 0.5 - offsets[:, 0] ** 2 - offsets[:, 1] ** 2 - offsets[:, 2] ** 2
-    return np.where(
-        t < 0,
-        0.0,
-        t ** 4 * np.array([np.dot(gradient_map[gis[i].astype('int32')], offset) for i, offset in enumerate(offsets)]))
+    return (t >= 0).astype(np.int32) * t ** 4 * np.array(
+        [np.dot(gradient_map[gis[i].astype('int32')], offset) for i, offset in enumerate(offsets)])
 
 
 def matrix_noise3d(input_vectors, perm, grad3):
