@@ -42,13 +42,6 @@ vertices_table = np.array([
 ], dtype=np.uint8)
 
 
-def select_simplex(ox, oy, oz):
-    return vertices_table[
-        int(ox >= oy),
-        int(oy >= oz),
-        int(ox >= oz)]
-
-
 def calculate_gradient_contribution(offsets, gis, gradient_map):
     t = 0.5 - offsets[:, 0] ** 2 - offsets[:, 1] ** 2 - offsets[:, 2] ** 2
     return np.where(
@@ -62,7 +55,10 @@ def matrix_noise3d(input_vectors, perm, grad3):
     skewed_vectors = np.floor(input_vectors + skew_factors[:, np.newaxis])
     unskew_factors = (skewed_vectors[:, 0] + skewed_vectors[:, 1] + skewed_vectors[:, 2]) * 1.0 / 6.0
     offsets_0 = input_vectors - (skewed_vectors - unskew_factors[:, np.newaxis])
-    simplex_vertices = np.array([select_simplex(offset[0], offset[1], offset[2]) for offset in offsets_0])
+    vertices_table_x_index = (offsets_0[:, 0] >= offsets_0[:, 1]).astype(np.uint8)
+    vertices_table_y_index = (offsets_0[:, 1] >= offsets_0[:, 2]).astype(np.uint8)
+    vertices_table_z_index = (offsets_0[:, 0] >= offsets_0[:, 2]).astype(np.uint8)
+    simplex_vertices = vertices_table[vertices_table_x_index, vertices_table_y_index, vertices_table_z_index]
     offsets_1 = offsets_0 - simplex_vertices[:, 0] + 1.0 / 6.0
     offsets_2 = offsets_0 - simplex_vertices[:, 1] + 1.0 / 3.0
     offsets_3 = offsets_0 - 0.5
