@@ -31,14 +31,14 @@ vertices_options = np.array([
     [[0, 0, 1], [0, 1, 1]],
     [[0, 1, 0], [0, 1, 1]],
     [[0, 1, 0], [1, 1, 0]]
-], dtype=np.int32)
+], dtype=np.uint8)
 
 # Dimesions are: x0 >= y0, y0 >= z0, x0 >= z0
 vertices_table = np.array([
-    [[[vertices_options[3]], [vertices_options[3]]],
-     [[vertices_options[4]], [vertices_options[5]]]],
-    [[[vertices_options[2]], [vertices_options[1]]],
-     [[vertices_options[2]], [vertices_options[0]]]]
+    [[vertices_options[3], vertices_options[3]],
+     [vertices_options[4], vertices_options[5]]],
+    [[vertices_options[2], vertices_options[1]],
+     [vertices_options[2], vertices_options[0]]]
 ], dtype=np.uint8)
 
 
@@ -46,7 +46,7 @@ def select_simplex(ox, oy, oz):
     return vertices_table[
         int(ox >= oy),
         int(oy >= oz),
-        int(ox >= oz)].reshape((2, 3))
+        int(ox >= oz)]
 
 
 def calculate_gradient_contribution(offsets, gis, gradient_map):
