@@ -44,17 +44,9 @@ np_vertex_table = np.array([
 ], dtype=np.uint8)
 
 
-def offset_product(offset, gi, gradient_map):
-    return T.dot(gradient_map[gi.astype('int32')], offset)
-
-
 def calculate_gradient_contribution(offsets, gis, gradient_map):
     t = 0.5 - offsets[:, 0] ** 2 - offsets[:, 1] ** 2 - offsets[:, 2] ** 2
-    dp, _ = theano.map(fn=offset_product, sequences=[offsets, gis], non_sequences=[gradient_map])
-    return T.switch(
-        T.lt(t, 0),
-        0.0,
-        t ** 4 * dp)
+    return T.gt(t, 0) * t ** 4 * T.batched_dot(gradient_map[gis], offsets)
 
 
 def matrix_noise3d(input_vectors, perm, grad3, vertex_table):
@@ -105,7 +97,7 @@ if __name__ == "__main__":
     vertex_table = T.tensor4('vertex_table', dtype='int32')
     # vertex_table.tag.test_value = np_vertex_table
     vl = T.matrix('vl', dtype='float32')
-    vl.tag.test_value = np.array([[0.5, 0.1, 1.7], [1.7732, 0.1461, 1.7]], dtype=np.float32)
+    # vl.tag.test_value = np.array([[0.5, 0.1, 1.7], [1.7732, 0.1461, 1.7]], dtype=np.float32)
     output = matrix_noise3d(vl, perm, grad3, vertex_table)
     simplex_noise = theano.function([vl, perm, grad3, vertex_table], output)
     print("Compiled")
