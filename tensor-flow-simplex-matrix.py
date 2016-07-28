@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 from time import time
 from tf_get_simplex_vertices import get_simplex_vertices
+from tf_map_gradient import map_gradients
 
 
 np_perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
@@ -44,9 +45,11 @@ np_vertex_table = np.array([
 ], dtype=np.float32)
 
 
-def calculate_gradient_contribution(offsets, gis, gradient_map):
+def calculate_gradient_contribution(offsets, gis, gradient_map, length):
     t = 0.5 - offsets[:, 0] ** 2 - offsets[:, 1] ** 2 - offsets[:, 2] ** 2
-    return (t >= 0).astype(np.float32) * t ** 4 * np.einsum('ij,ij->i', gradient_map[gis.astype('int32')], offsets)
+    mapped_gis = map_gradients(gradient_map, gis, length)
+    dot_products = tf.reduce_sum(mapped_gis * offsets, 1)
+    return tf.to_float(tf.greater_equal(t, 0)) * t ** 4 * dot_products
 
 
 def noise3d(input_vectors, perm, grad3, vertex_table, length):
@@ -108,10 +111,10 @@ def noise3d(input_vectors, perm, grad3, vertex_table, length):
                 tf.expand_dims(masked_skewed_vectors[:, 2], 1) +
                 1), 1)), 1)
     ) % 12
-    n0s = tf.py_func(calculate_gradient_contribution, [offsets_0, gi0s, grad3], Tout=[tf.float32])
-    n1s = tf.py_func(calculate_gradient_contribution, [offsets_1, gi1s, grad3], Tout=[tf.float32])
-    n2s = tf.py_func(calculate_gradient_contribution, [offsets_2, gi2s, grad3], Tout=[tf.float32])
-    n3s = tf.py_func(calculate_gradient_contribution, [offsets_3, gi3s, grad3], Tout=[tf.float32])
+    n0s = calculate_gradient_contribution(offsets_0, gi0s, grad3, length)
+    n1s = calculate_gradient_contribution(offsets_1, gi1s, grad3, length)
+    n2s = calculate_gradient_contribution(offsets_2, gi2s, grad3, length)
+    n3s = calculate_gradient_contribution(offsets_3, gi3s, grad3, length)
     return 23.0 * tf.squeeze(
         tf.expand_dims(n0s, 1) + tf.expand_dims(n1s, 1) + tf.expand_dims(n2s, 1) + tf.expand_dims(n3s, 1))
 
