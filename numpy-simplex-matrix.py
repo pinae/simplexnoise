@@ -81,16 +81,22 @@ def matrix_noise3d(input_vectors, perm, grad3):
 
 if __name__ == "__main__":
     arr = np.empty((512, 512, 3), dtype=np.uint8)
-    input_vectors = np.zeros((arr.shape[1] * arr.shape[0], 3), dtype=np.float32)
+    phases = 5
+    scaling = 200.0
+    input_vectors = np.zeros((arr.shape[1] * arr.shape[0] * phases, 3), dtype=np.float32)
     for y in range(0, arr.shape[0]):
         for x in range(0, arr.shape[1]):
-            input_vectors[y * arr.shape[1] + x] = [x / 80.0, y / 80.0, 1.7]
+            for phase in range(phases):
+                input_vectors[y * arr.shape[1] * phases + x * phases + phase] = \
+                    [x / scaling * np.power(2, phase), y / scaling * np.power(2, phase), 1.7 + 10 * phase]
     start_time = time()
     raw_noise = matrix_noise3d(input_vectors, np_perm, np_grad3)
     print("The calculation took " + str(time() - start_time) + " seconds.")
     for y in range(0, arr.shape[0]):
         for x in range(0, arr.shape[1]):
-            val = raw_noise[x + y * arr.shape[1]]
+            val = 0.0
+            for phase in range(phases):
+                val += raw_noise[phase + x * phases + y * arr.shape[1] * phases] / np.power(2, phase)
             val = int(np.floor((val + 1.0) * 128))
             arr[y, x, 0] = val
             arr[y, x, 1] = val

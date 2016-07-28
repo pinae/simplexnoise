@@ -77,18 +77,28 @@ def np_noise3d(v):
 
 
 if __name__ == "__main__":
-    raw_noise = np.empty((256, 256), dtype=np.float32)
+    arr = np.empty((512, 512, 3), dtype=np.uint8)
+    phases = 5
+    scaling = 200.0
+    input_vectors = np.zeros((arr.shape[1] * arr.shape[0] * phases, 3), dtype=np.float32)
+    for y in range(0, arr.shape[0]):
+        for x in range(0, arr.shape[1]):
+            for phase in range(phases):
+                input_vectors[y * arr.shape[1] * phases + x * phases + phase] = \
+                    [x / scaling * np.power(2, phase), y / scaling * np.power(2, phase), 1.7 + 10 * phase]
+    raw_noise = np.empty(input_vectors.shape[0], dtype=np.float32)
     start_time = time()
-    for y in range(0, 256):
-        for x in range(0, 256):
-            raw_noise[x, y] = np_noise3d(np.array([x/80.0, y/80.0, 1.7]))
+    for i in range(0, input_vectors.shape[0]):
+        raw_noise[i] = np_noise3d(input_vectors[i])
     print("The calculation took " + str(time() - start_time) + " seconds.")
-    arr = np.empty((256, 256, 3), dtype=np.uint8)
-    for y in range(0, 256):
-        for x in range(0, 256):
-            val = int(np.floor((raw_noise[x, y] + 1.0) * 128))
-            arr[x, y, 0] = val
-            arr[x, y, 1] = val
-            arr[x, y, 2] = val
+    for y in range(0, arr.shape[0]):
+        for x in range(0, arr.shape[1]):
+            val = 0.0
+            for phase in range(phases):
+                val += raw_noise[phase + x * phases + y * arr.shape[1] * phases] / np.power(2, phase)
+            val = int(np.floor((val + 1.0) * 128))
+            arr[y, x, 0] = val
+            arr[y, x, 1] = val
+            arr[y, x, 2] = val
     image = Image.fromarray(arr)
     image.show()
