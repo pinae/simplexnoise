@@ -3,6 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 import numpy as np
 from time import time
+from input import get_input_vectors
 from image_helpers import show
 
 
@@ -80,16 +81,11 @@ def matrix_noise3d(input_vectors, perm, grad3):
 
 
 if __name__ == "__main__":
-    arr = np.empty((512, 512, 3), dtype=np.uint8)
+    shape = (512, 512)
     phases = 5
     scaling = 200.0
-    input_vectors = np.zeros((arr.shape[1] * arr.shape[0] * phases, 3), dtype=np.float32)
-    for y in range(0, arr.shape[0]):
-        for x in range(0, arr.shape[1]):
-            for phase in range(phases):
-                input_vectors[y * arr.shape[1] * phases + x * phases + phase] = \
-                    [x / scaling * np.power(2, phase), y / scaling * np.power(2, phase), 1.7 + 10 * phase]
+    input_vectors = get_input_vectors(shape, phases, scaling)
     start_time = time()
     raw_noise = matrix_noise3d(input_vectors, np_perm, np_grad3)
     print("The calculation took " + str(time() - start_time) + " seconds.")
-    show(raw_noise, phases, arr.shape)
+    show(raw_noise, phases, shape)
