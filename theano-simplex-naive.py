@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
 import numpy as np
-from PIL import Image
 import theano.tensor as T
 import theano
 from time import time
+from image_helpers import show
 
 
 np_perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
@@ -135,14 +135,4 @@ if __name__ == "__main__":
     start_time = time()
     raw_noise = simplex_noise(input_vectors, np_perm, np_grad3)
     print("The calculation took " + str(time() - start_time) + " seconds.")
-    for y in range(0, arr.shape[0]):
-        for x in range(0, arr.shape[1]):
-            val = 0.0
-            for phase in range(phases):
-                val += raw_noise[phase + x * phases + y * arr.shape[1] * phases] / np.power(2, phase)
-            val = int(np.floor((val + 1.0) * 128))
-            arr[y, x, 0] = val
-            arr[y, x, 1] = val
-            arr[y, x, 2] = val
-    image = Image.fromarray(arr)
-    image.show()
+    show(raw_noise, phases, arr.shape)

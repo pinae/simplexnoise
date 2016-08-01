@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
 import numpy as np
-from PIL import Image
 from time import time
+from image_helpers import show
 
 perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
         37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32,
@@ -91,14 +91,4 @@ if __name__ == "__main__":
     for i in range(0, input_vectors.shape[0]):
         raw_noise[i] = np_noise3d(input_vectors[i])
     print("The calculation took " + str(time() - start_time) + " seconds.")
-    for y in range(0, arr.shape[0]):
-        for x in range(0, arr.shape[1]):
-            val = 0.0
-            for phase in range(phases):
-                val += raw_noise[phase + x * phases + y * arr.shape[1] * phases] / np.power(2, phase)
-            val = int(np.floor((val + 1.0) * 128))
-            arr[y, x, 0] = val
-            arr[y, x, 1] = val
-            arr[y, x, 2] = val
-    image = Image.fromarray(arr)
-    image.show()
+    show(raw_noise, phases, arr.shape)
