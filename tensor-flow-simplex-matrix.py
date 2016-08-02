@@ -37,7 +37,7 @@ vertex_options = np.array([
     [0, 1, 0, 1, 1, 0]
 ], dtype=np.float32)
 
-# Dimesions are: x0 >= y0, y0 >= z0, x0 >= z0
+# Dimensions are: x0 >= y0, y0 >= z0, x0 >= z0
 np_vertex_table = np.array([
     [[vertex_options[3], vertex_options[3]],
      [vertex_options[4], vertex_options[5]]],

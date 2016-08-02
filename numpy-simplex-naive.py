@@ -33,7 +33,7 @@ vertices_options = [
     [[0, 1, 0], [1, 1, 0]]
 ]
 
-# Dimesions are: x0 >= y0, y0 >= z0, x0 >= z0
+# Dimensions are: x0 >= y0, y0 >= z0, x0 >= z0
 vertices_table = np.array([
     [[[vertices_options[3]], [vertices_options[3]]],
      [[vertices_options[4]], [vertices_options[5]]]],
