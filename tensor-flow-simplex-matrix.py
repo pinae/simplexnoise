@@ -9,7 +9,6 @@ from tf_map_gradient import map_gradients
 from input import get_input_vectors
 from image_helpers import show
 
-
 np_perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
            37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32,
            57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27,
@@ -127,13 +126,18 @@ if __name__ == "__main__":
     input_vectors = get_input_vectors(shape, phases, scaling)
     perm = tf.Variable(np_perm, name='perm')
     grad3 = tf.Variable(np_grad3, name='grad3')
+    num_steps_burn_in = 10
+    num_steps_benchmark = 20
     vl = tf.Variable(input_vectors, name='vector_list')
     vertex_table = tf.Variable(np_vertex_table, name='vertex_table')
     raw_noise = noise3d(vl, perm, grad3, vertex_table, input_vectors.shape[0])
     init = tf.initialize_all_variables()
+    noise = noise3d(input_vectors, np_perm, np_grad3, np_vertex_table, input_vectors.shape[0])
     sess = tf.Session()
-    start_time = time()
     sess.run(init)
-    raw_noise = sess.run(noise3d(input_vectors, np_perm, np_grad3, np_vertex_table, input_vectors.shape[0]))
-    print("The calculation took " + str(time() - start_time) + " seconds.")
+    for i in xrange(num_steps_burn_in + num_steps_benchmark):
+      if (i == num_steps_burn_in):
+        start_time = time()
+      raw_noise = sess.run(noise)
+    print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
     show(raw_noise, phases, shape)
