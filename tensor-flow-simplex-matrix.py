@@ -135,9 +135,10 @@ if __name__ == "__main__":
     noise = noise3d(input_vectors, np_perm, np_grad3, np_vertex_table, input_vectors.shape[0])
     sess = tf.Session()
     sess.run(init)
-    for i in xrange(num_steps_burn_in + num_steps_benchmark):
-      if (i == num_steps_burn_in):
-        start_time = time()
-      raw_noise = sess.run(noise)
+    for i in range(num_steps_burn_in):
+        raw_noise = sess.run(noise)
+    start_time = time()
+    for i in range(num_steps_benchmark):
+        raw_noise = sess.run(noise)
     print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
     show(raw_noise, phases, shape)
