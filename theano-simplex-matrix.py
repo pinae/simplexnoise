@@ -106,7 +106,12 @@ if __name__ == "__main__":
     phases = 5
     scaling = 200.0
     input_vectors = get_input_vectors(shape, phases, scaling)
+    num_steps_burn_in = 10
+    num_steps_benchmark = 20
+    for i in range(num_steps_burn_in):
+        raw_noise = simplex_noise(input_vectors, np_perm, np_grad3, np_vertex_table)
     start_time = time()
-    raw_noise = simplex_noise(input_vectors, np_perm, np_grad3, np_vertex_table)
-    print("The calculation took " + str(time() - start_time) + " seconds.")
+    for i in range(num_steps_benchmark):
+        raw_noise = simplex_noise(input_vectors, np_perm, np_grad3, np_vertex_table)
+    print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
     show(raw_noise, phases, shape)
