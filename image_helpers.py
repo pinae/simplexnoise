@@ -12,3 +12,12 @@ def show(raw_noise, phases, shape):
     arr = np.append(val, np.append(val, val, axis=2), axis=2)
     image = Image.fromarray(arr)
     image.show()
+
+
+def save(raw_noise, phases, shape, filename="image", index=0):
+    val = np.floor((np.sum(
+        raw_noise.reshape((shape[0], shape[1], phases)) / np.power(
+            2, np.arange(phases)), axis=2) + 1) * 128).astype(np.uint8).reshape((shape[0], shape[1], 1))
+    arr = np.append(val, np.append(val, val, axis=2), axis=2)
+    image = Image.fromarray(arr)
+    image.save(filename + str(index) + ".jpg")
