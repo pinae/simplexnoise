@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
 from input import get_input_vectors
-from image_helpers import show
+from image_helpers import save
 import numpy as np
 from time import time
 
@@ -70,14 +70,60 @@ def perlin2d(x, y):
     return v0 - wy * (v0 - v1)
 
 
+def perlin3d(x, y, z):
+    x0 = fast_floor(x)
+    x1 = x0 + 1
+    y0 = fast_floor(y)
+    y1 = y0 + 1
+    z0 = fast_floor(z)
+    z1 = z0 + 1
+
+    tx0 = x - x0
+    tx1 = tx0 - 1
+    ty0 = y - y0
+    ty1 = ty0 - 1
+    tz0 = z - z0
+    tz1 = tz0 - 1
+
+    gi000 = perm[x0 + perm[y0 + perm[z0]]] % 12
+    gi001 = perm[x1 + perm[y0 + perm[z0]]] % 12
+    gi010 = perm[x0 + perm[y1 + perm[z0]]] % 12
+    gi100 = perm[x0 + perm[y0 + perm[z1]]] % 12
+    gi011 = perm[x1 + perm[y1 + perm[z0]]] % 12
+    gi101 = perm[x1 + perm[y0 + perm[z1]]] % 12
+    gi110 = perm[x0 + perm[y1 + perm[z1]]] % 12
+    gi111 = perm[x1 + perm[y1 + perm[z1]]] % 12
+
+    v000 = grad3[gi000][0] * tx0 + grad3[gi000][1] * ty0 + grad3[gi000][2] * tz0
+    v001 = grad3[gi001][0] * tx1 + grad3[gi001][1] * ty0 + grad3[gi001][2] * tz0
+    v010 = grad3[gi010][0] * tx0 + grad3[gi010][1] * ty1 + grad3[gi010][2] * tz0
+    v100 = grad3[gi100][0] * tx0 + grad3[gi100][1] * ty0 + grad3[gi100][2] * tz1
+    v011 = grad3[gi011][0] * tx1 + grad3[gi011][1] * ty1 + grad3[gi011][2] * tz0
+    v101 = grad3[gi101][0] * tx1 + grad3[gi101][1] * ty0 + grad3[gi101][2] * tz1
+    v110 = grad3[gi110][0] * tx0 + grad3[gi110][1] * ty1 + grad3[gi110][2] * tz1
+    v111 = grad3[gi111][0] * tx1 + grad3[gi111][1] * ty1 + grad3[gi111][2] * tz1
+
+    wx = (10 - (15 - 6 * tx0) * tx0) * tx0 ** 3
+    v00 = v000 - wx * (v000 - v001)
+    v01 = v010 - wx * (v010 - v011)
+    v10 = v100 - wx * (v100 - v101)
+    v11 = v110 - wx * (v110 - v111)
+    wy = (10 - (15 - 6 * ty0) * ty0) * ty0 ** 3
+    v0 = v00 - wy * (v00 - v01)
+    v1 = v10 - wy * (v10 - v11)
+    wz = (10 - (15 - 6 * tz0) * tz0) * tz0 ** 3
+    return v0 - wz * (v0 - v1)
+
+
 if __name__ == "__main__":
-    shape = (512, 512)
+    shape = (1080, 1920)
     phases = 1
-    scaling = 50.0
-    input_vectors = get_input_vectors(shape, phases, scaling)
-    raw_noise = np.empty(input_vectors.shape[0], dtype=np.float32)
-    start_time = time()
-    for i in range(0, input_vectors.shape[0]):
-        raw_noise[i] = perlin2d(input_vectors[i][0], input_vectors[i][1])
-    print("The calculation took " + str(time() - start_time) + " seconds.")
-    show(raw_noise, phases, shape)
+    scaling = 100.0
+    for frame in range(250):
+        input_vectors = get_input_vectors(shape, phases, scaling, offset=(0, 0, frame/300))
+        raw_noise = np.empty(input_vectors.shape[0], dtype=np.float32)
+        start_time = time()
+        for i in range(0, input_vectors.shape[0]):
+            raw_noise[i] = perlin3d(input_vectors[i][0], input_vectors[i][1], input_vectors[i][2])
+        print("The calculation took " + str(time() - start_time) + " seconds.")
+        save(raw_noise, phases, shape, "classicPerlin3D", frame)
