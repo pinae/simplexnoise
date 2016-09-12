@@ -141,4 +141,5 @@ if __name__ == "__main__":
     for i in range(num_steps_benchmark):
         raw_noise = sess.run(noise)
     print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
+    # writer = tf.train.SummaryWriter("tf-logs/", sess.graph)  # write logs for TensorBoard
     show(raw_noise, phases, shape)
