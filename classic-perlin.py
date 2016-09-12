@@ -120,10 +120,10 @@ if __name__ == "__main__":
     phases = 1
     scaling = 100.0
     for frame in range(250):
-        input_vectors = get_input_vectors(shape, phases, scaling, offset=(0, 0, frame/300))
+        input_vectors = get_input_vectors(shape, phases, scaling, offset=(0, 0, frame/70))
         raw_noise = np.empty(input_vectors.shape[0], dtype=np.float32)
         start_time = time()
         for i in range(0, input_vectors.shape[0]):
             raw_noise[i] = perlin3d(input_vectors[i][0], input_vectors[i][1], input_vectors[i][2])
         print("The calculation took " + str(time() - start_time) + " seconds.")
-        save(raw_noise, phases, shape, "classicPerlin3D", frame)
+        save(raw_noise, phases, shape, "classicPerlin3D" + "0"*(3-len(str(frame))), frame)
