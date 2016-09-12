@@ -6,7 +6,7 @@ import numpy as np
 from time import time
 from tf_get_simplex_vertices import get_simplex_vertices
 from tf_map_gradient import map_gradients
-from input import get_input_vectors
+from tf_input import get_input_vectors
 from image_helpers import show
 
 np_perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
@@ -121,18 +121,24 @@ def noise3d(input_vectors, perm, grad3, vertex_table, length):
 
 if __name__ == "__main__":
     shape = (512, 512)
-    phases = 5
+    phases = 20
     scaling = 200.0
-    input_vectors = get_input_vectors(shape, phases, scaling)
+    offset = (0.0, 0.0, 1.7)
+    v_shape = tf.Variable([512, 512], name='shape')
+    v_phases = tf.Variable(5, name='phases')
+    v_scaling = tf.Variable(200.0, name='scaling')
+    v_offset = tf.Variable([0.0, 0.0, 1.7], name='offset')
+    input_vectors = get_input_vectors(v_shape, v_phases, v_scaling, v_offset)
     perm = tf.Variable(np_perm, name='perm')
     grad3 = tf.Variable(np_grad3, name='grad3')
     num_steps_burn_in = 10
     num_steps_benchmark = 20
-    vl = tf.Variable(input_vectors, name='vector_list')
+    vl = tf.Variable(np.zeros((shape[0] * shape[1] * phases, 3), dtype=np.float32), name='vector_list')
     vertex_table = tf.Variable(np_vertex_table, name='vertex_table')
-    raw_noise = noise3d(vl, perm, grad3, vertex_table, input_vectors.shape[0])
+    raw_noise = noise3d(vl, perm, grad3, vertex_table, shape[0] * shape[1] * phases)
     init = tf.initialize_all_variables()
-    noise = noise3d(input_vectors, np_perm, np_grad3, np_vertex_table, input_vectors.shape[0])
+    input_vectors = get_input_vectors(shape, phases, scaling, offset)
+    noise = noise3d(input_vectors, np_perm, np_grad3, np_vertex_table, shape[0] * shape[1] * phases)
     sess = tf.Session()
     sess.run(init)
     for i in range(num_steps_burn_in):
