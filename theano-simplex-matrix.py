@@ -5,7 +5,7 @@ import numpy as np
 import theano.tensor as T
 import theano
 from time import time
-from image_helpers import sum_phases, show
+from image_helpers import show
 
 
 np_perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
