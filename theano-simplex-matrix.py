@@ -6,7 +6,7 @@ import theano.tensor as T
 import theano
 from time import time
 from input import get_input_vectors
-from image_helpers import show
+from image_helpers import sum_phases, show
 
 
 np_perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
@@ -114,4 +114,5 @@ if __name__ == "__main__":
     for i in range(num_steps_benchmark):
         raw_noise = simplex_noise(input_vectors, np_perm, np_grad3, np_vertex_table)
     print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
-    show(raw_noise, phases, shape)
+    image_data = sum_phases(raw_noise, phases, shape)
+    show(image_data)

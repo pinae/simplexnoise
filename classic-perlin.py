@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
 from input import get_input_vectors
-from image_helpers import save
+from image_helpers import sum_phases, save
 import numpy as np
 from time import time
 
@@ -126,4 +126,5 @@ if __name__ == "__main__":
         for i in range(0, input_vectors.shape[0]):
             raw_noise[i] = perlin3d(input_vectors[i][0], input_vectors[i][1], input_vectors[i][2])
         print("The calculation took " + str(time() - start_time) + " seconds.")
-        save(raw_noise, phases, shape, "classicPerlin3D" + "0"*(3-len(str(frame))), frame)
+        image_data = sum_phases(raw_noise, phases, shape)
+        save(image_data, "classicPerlin3D" + "0"*(3-len(str(frame))), frame)

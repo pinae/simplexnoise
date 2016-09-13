@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 import numpy as np
 from time import time
 from input import get_input_vectors
-from image_helpers import show
+from image_helpers import sum_phases, show
 
 perm = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99,
         37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32,
@@ -87,4 +87,5 @@ if __name__ == "__main__":
     for i in range(0, input_vectors.shape[0]):
         raw_noise[i] = np_noise3d(input_vectors[i])
     print("The calculation took " + str(time() - start_time) + " seconds.")
-    show(raw_noise, phases, shape)
+    image_data = sum_phases(raw_noise, phases, shape)
+    show(image_data)

@@ -119,33 +119,45 @@ def noise3d(input_vectors, perm, grad3, vertex_table, length):
         tf.expand_dims(n0s, 1) + tf.expand_dims(n1s, 1) + tf.expand_dims(n2s, 1) + tf.expand_dims(n3s, 1))
 
 
+def calculate_image(noise_values, phases, shape):
+    val = tf.floor((tf.add_n(tf.split(
+        2,
+        phases,
+        tf.reshape(noise_values, [shape[0], shape[1], phases]) / tf.pow(
+            2.0,
+            tf.linspace(0.0, tf.to_float(phases - 1), phases))
+    )) + 1.0) * 128)
+    return tf.concat(2, [val, val, val])
+
+
 if __name__ == "__main__":
     shape = (512, 512)
-    phases = 20
+    phases = 10
     scaling = 200.0
     offset = (0.0, 0.0, 1.7)
     v_shape = tf.Variable([512, 512], name='shape')
     v_phases = tf.Variable(5, name='phases')
     v_scaling = tf.Variable(200.0, name='scaling')
     v_offset = tf.Variable([0.0, 0.0, 1.7], name='offset')
-    input_vectors = get_input_vectors(v_shape, v_phases, v_scaling, v_offset)
+    v_input_vectors = get_input_vectors(v_shape, v_phases, v_scaling, v_offset)
     perm = tf.Variable(np_perm, name='perm')
     grad3 = tf.Variable(np_grad3, name='grad3')
     num_steps_burn_in = 10
     num_steps_benchmark = 20
-    vl = tf.Variable(np.zeros((shape[0] * shape[1] * phases, 3), dtype=np.float32), name='vector_list')
     vertex_table = tf.Variable(np_vertex_table, name='vertex_table')
-    raw_noise = noise3d(vl, perm, grad3, vertex_table, shape[0] * shape[1] * phases)
+    raw_noise = noise3d(v_input_vectors, perm, grad3, vertex_table, shape[0] * shape[1] * phases)
+    raw_image_data = calculate_image(raw_noise, phases, v_shape)
     init = tf.initialize_all_variables()
     input_vectors = get_input_vectors(shape, phases, scaling, offset)
     noise = noise3d(input_vectors, np_perm, np_grad3, np_vertex_table, shape[0] * shape[1] * phases)
+    image_data = calculate_image(noise, phases, shape)
     sess = tf.Session()
     sess.run(init)
     for i in range(num_steps_burn_in):
-        raw_noise = sess.run(noise)
+        raw_img = sess.run(image_data)
     start_time = time()
     for i in range(num_steps_benchmark):
-        raw_noise = sess.run(noise)
+        raw_img = sess.run(image_data)
     print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
     # writer = tf.train.SummaryWriter("tf-logs/", sess.graph)  # write logs for TensorBoard
-    show(raw_noise, phases, shape)
+    show(raw_img.astype(np.uint8))
