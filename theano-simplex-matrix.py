@@ -95,6 +95,12 @@ def matrix_noise3d(input_vectors, perm, grad3, vertex_table):
     return 23.0 * (n0s + n1s + n2s + n3s)
 
 
+def calculate_image(noise_values, phases, shape):
+    val = T.floor((T.sum(noise_values.reshape((shape[0], shape[1], phases)) / T.pow(
+        2.0, T.arange(phases)), axis=2) + 1) * 128).astype('uint8').reshape((shape[0], shape[1], 1))
+    return T.concatenate([val, val, val], axis=2)
+
+
 if __name__ == "__main__":
     shape = (512, 512)
     phases = 5
@@ -120,16 +126,16 @@ if __name__ == "__main__":
     v_offset = T.vector(name='offset', dtype='float32')
     # v_offset.tag.test_value = offset
     vl = get_input_vectors(v_shape, v_phases, v_scaling, v_offset)
-    output = matrix_noise3d(vl, perm, grad3, vertex_table)
-    simplex_noise = theano.function([v_shape, v_offset, perm, grad3, vertex_table], output)
+    v_noise = matrix_noise3d(vl, perm, grad3, vertex_table)
+    v_image_data = calculate_image(v_noise, v_phases, v_shape)
+    simplex_noise = theano.function([v_shape, v_offset, perm, grad3, vertex_table], v_image_data)
     print("Compiled")
     num_steps_burn_in = 10
     num_steps_benchmark = 20
     for i in range(num_steps_burn_in):
-        raw_noise = simplex_noise(shape, offset, np_perm, np_grad3, np_vertex_table)
+        image_data = simplex_noise(shape, offset, np_perm, np_grad3, np_vertex_table)
     start_time = time()
     for i in range(num_steps_benchmark):
-        raw_noise = simplex_noise(shape, offset, np_perm, np_grad3, np_vertex_table)
+        image_data = simplex_noise(shape, offset, np_perm, np_grad3, np_vertex_table)
     print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
-    image_data = sum_phases(raw_noise, phases, shape)
     show(image_data)
