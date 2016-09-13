@@ -5,7 +5,6 @@ import numpy as np
 import theano.tensor as T
 import theano
 from time import time
-from input import get_input_vectors
 from image_helpers import sum_phases, show
 
 
@@ -43,6 +42,17 @@ np_vertex_table = np.array([
     [[vertices_options[2], vertices_options[1]],
      [vertices_options[2], vertices_options[0]]]
 ], dtype=np.uint8)
+
+
+def get_input_vectors(shape, phases, scaling, offset):
+    x = T.repeat(offset[0] + T.arange(shape[0]) / scaling, shape[1] * phases).reshape(
+        (shape[0], shape[1], phases)) * T.pow(2, T.arange(phases))
+    y = T.repeat(T.tile(offset[1] + T.arange(shape[1]) / scaling, shape[0]).reshape(
+        (shape[0], shape[1], 1)), phases, axis=2) * T.pow(2, T.arange(phases))
+    z = T.tile(offset[2] + 10 * T.arange(phases), shape[0] * shape[1]).reshape((shape[0], shape[1], phases, 1))
+    x = x.reshape((shape[0], shape[1], phases, 1))
+    y = y.reshape((shape[0], shape[1], phases, 1))
+    return T.concatenate([x, y, z], axis=3).reshape((shape[0] * shape[1] * phases, 3)).astype('float32')
 
 
 def calculate_gradient_contribution(offsets, gis, gradient_map):
@@ -86,6 +96,10 @@ def matrix_noise3d(input_vectors, perm, grad3, vertex_table):
 
 
 if __name__ == "__main__":
+    shape = (512, 512)
+    phases = 5
+    scaling = 200.0
+    offset = np.array([0.0, 0.0, 1.7], dtype=np.float32)
     theano.config.mode = 'FAST_RUN'
     theano.config.floatX = 'float32'
     theano.config.openmp = True
@@ -97,22 +111,25 @@ if __name__ == "__main__":
     # grad3.tag.test_value = np_grad3
     vertex_table = T.tensor4('vertex_table', dtype='int32')
     # vertex_table.tag.test_value = np_vertex_table
-    vl = T.matrix('vl', dtype='float32')
-    # vl.tag.test_value = np.array([[0.5, 0.1, 1.7], [1.7732, 0.1461, 1.7]], dtype=np.float32)
+    v_shape = T.vector('shape', dtype='int32')
+    # v_shape.tag.test_value = shape
+    v_phases = T.constant(phases, name='phases', dtype='int32')
+    # v_phases.tag.test_value = phases
+    v_scaling = T.constant(scaling, name='scaling', dtype='float32')
+    # v_scaling.tag.test_value = scaling
+    v_offset = T.vector(name='offset', dtype='float32')
+    # v_offset.tag.test_value = offset
+    vl = get_input_vectors(v_shape, v_phases, v_scaling, v_offset)
     output = matrix_noise3d(vl, perm, grad3, vertex_table)
-    simplex_noise = theano.function([vl, perm, grad3, vertex_table], output)
+    simplex_noise = theano.function([v_shape, v_offset, perm, grad3, vertex_table], output)
     print("Compiled")
-    shape = (512, 512)
-    phases = 5
-    scaling = 200.0
-    input_vectors = get_input_vectors(shape, phases, scaling)
     num_steps_burn_in = 10
     num_steps_benchmark = 20
     for i in range(num_steps_burn_in):
-        raw_noise = simplex_noise(input_vectors, np_perm, np_grad3, np_vertex_table)
+        raw_noise = simplex_noise(shape, offset, np_perm, np_grad3, np_vertex_table)
     start_time = time()
     for i in range(num_steps_benchmark):
-        raw_noise = simplex_noise(input_vectors, np_perm, np_grad3, np_vertex_table)
+        raw_noise = simplex_noise(shape, offset, np_perm, np_grad3, np_vertex_table)
     print("The calculation took %.4f seconds." % ((time() - start_time) / num_steps_benchmark))
     image_data = sum_phases(raw_noise, phases, shape)
     show(image_data)
